@@ -34,10 +34,43 @@ client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
 os.environ["OPENAI_API_KEY"] = os.getenv('OPENAI_API_KEY')
 llm = ChatOpenAI(model_name="gpt-4-1106-preview")
 
-bg = [
-    'https://images.unsplash.com/photo-1580508244245-c446ca981a6b?q=80&w=3174&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
-    'https://img.freepik.com/free-photo/two-tones-gray-background_53876-104897.jpg?w=2000&t=st=1708169239~exp=1708169839~hmac=587784c160761fa043176f806b74a63826cfb1d17f23ef11f27561e7183004c5'
+### Variables
+
+# Length 23
+scenerio = [
+    "A customer enters your shop and begins loudly criticizing the layout and cleanliness of your store in front of other customers. They make derogatory comments about the products you sell and imply that your prices are too high. Their behavior is causing discomfort among other customers, and you feel personally attacked and embarrassed.",
+    "A customer approaches you with a product they purchased a few days ago, claiming it's defective and demanding a refund or replacement. However, upon inspection, you notice that the product has been clearly damaged due to mishandling by the customer.",
+    "A customer alleges that they were treated unfairly or discriminated against based on their race, gender, age, disability, or other protected characteristic, leading to a potentially damaging situation for your business reputation.",
+    "A customer insists on receiving a refund for an item well beyond the store's stated return policy, causing frustration and potential conflict as you attempt to enforce your policies.",
+    "A customer is caught attempting to steal merchandise from your store, creating a tense and potentially dangerous situation for both staff and other customers.",
+    "A customer leaves a scathing review online, embellishing or fabricating negative aspects of their experience, which could harm your business's reputation if left unaddressed.",
+    "A customer demands preferential treatment or discounts based on their perceived importance or relationship with the business, creating an uncomfortable situation where you must uphold fairness and consistency in your policies.",
+    "A customer brings a large group of rowdy or disruptive individuals into the store, disturbing the shopping experience for other customers and potentially leading to confrontations or disturbances.",
+    "A customer threatens to report your business to regulatory authorities or media outlets over a minor or perceived issue, leveraging the threat of negative publicity to manipulate the situation in their favor.",
+    "A customer allows their children to run wild in the store, causing disturbances, knocking over displays, and potentially creating safety hazards for themselves and other customers.",
+    "A customer repeatedly haggles over prices, demands discounts, or negotiates beyond reasonable limits, making it difficult to conduct transactions smoothly and causing frustration for both staff and other customers.",
+    "A dissatisfied customer spreads false rumors or negative gossip about your business to other customers, online forums, or social media platforms, potentially damaging your reputation and credibility.",
+    "A customer becomes confrontational or hostile when informed of store policies regarding returns, refunds, or other procedures, refusing to accept the rules and causing a scene in the store.",
+    "A customer personally insults or attacks you as the owner, criticizing your competency, appearance, or character in a hurtful or derogatory manner, causing emotional distress and discomfort.",
+    "A customer refuses to leave the store premises even after closing hours, insisting on browsing or completing a purchase, leading to potential security concerns and disrupting closing procedures.",
+    "A customer tries to return items that show clear signs of wear, use, or damage, insisting that they are still eligible for a refund or exchange, creating a dispute over the condition of the merchandise.",
+    "A customer unfairly blames your business for personal issues, misfortunes, or external circumstances beyond your control, expecting compensation or resolution for matters unrelated to your products or services.",
+    "A customer asks for a service or product that your business doesn't provide, becoming increasingly insistent or frustrated when informed of this limitation, potentially leading to disappointment or dissatisfaction.",
+    "A customer makes unwelcome advances or comments of a sexual nature towards your staff, creating discomfort and potentially violating workplace harassment policies.",
+    "A customer enters your shop exhibiting erratic behavior, such as slurred speech, stumbling, or confusion, due to intoxication or substance abuse, creating a challenging situation that requires careful handling to ensure their safety and that of others.",
+    "A customer attempts to pay for purchases using fraudulent means, such as stolen credit cards or counterfeit currency, posing a risk to your business's financial security and requiring swift action to prevent losses.",
+    "A customer demands immediate attention or service during peak business hours when staff are already overwhelmed with other customers, creating stress and potentially impacting the quality of service provided to other patrons.",
+    "A customer tries to return an item without its original packaging, tags, or labels, insisting on a refund or exchange despite not meeting the conditions outlined in your store's return policy, resulting in a dispute over the item's condition and eligibility for return."
 ]
+
+bg = [
+    "https://i.postimg.cc/SxPZk5F4/sveltelogobackdrop-blur-md.png"
+]
+
+# bg = [
+#     'https://images.unsplash.com/photo-1580508244245-c446ca981a6b?q=80&w=3174&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
+#     'https://img.freepik.com/free-photo/two-tones-gray-background_53876-104897.jpg?w=2000&t=st=1708169239~exp=1708169839~hmac=587784c160761fa043176f806b74a63826cfb1d17f23ef11f27561e7183004c5'
+# ]
 
 ###### Helper Functions - Start ######
 
@@ -90,7 +123,12 @@ def generate_details(prompt):
 # POST /detect-objects -> detect objects from image and return a list
 # POST /generate-product-details -> Generate a description for the given product array
 # POST /teach-topic -> Given a topic teach about that topic
-
+# POST /bg-changer -> change background image of product
+# POST /scenerio-score -> score the given scenerio
+# {
+#   "index": 5,
+#   "response": "Descalate the situation and call the appropiate authorities"
+# }
 
 @app.route('/detect-objects', methods=['POST'])
 def detect_objects_api():
@@ -243,6 +281,47 @@ def change_bg():
         print(f"{foreground_image_path} does not exist.")
         return "Failure", 400
 
-   
+@app.route('/scenerio-score', methods=['POST'])
+def scenerio_score():
+    data = request.json
+    index = data.get('index')
+    response = data.get('response')
+    
+    conversation=[
+        {"role": "system", "content": 
+        '''
+        Suppose I am a shopowner and a customer came in to my shop. An uncomfortable scenerio will be given at the end of this prompt. 
+        I will reply it with a response that I will say to that customer and you will have to score my response out of 10 in terms of was it appropiate.
+        Here is an examples. 
+        Scenerio: A customer enters your shop and begins loudly criticizing the layout and cleanliness of your store in front of other customers. They make derogatory comments about the products you sell and imply that your prices are too high. Their behavior is causing discomfort among other customers, and you feel personally attacked and embarrassed.
+        Response-1: Get angry and tell him to leave.
+        Scoring: 3/10. (Along with reason for such scoring)
+        Response-2: Remain calm and tell him to leave politely as he is disturbing the other customers.
+        Scoring: 7/10. (Along with reason for such scoring)
+
+        Return the score and review as a json like this example - 
+    
+        {
+            "score": 3,
+            "review": "Some review"
+        }
+        
+        Given scenerio that will scored is:
+        '''
+        + scenerio[index]
+        }
+    ]   
+    
+    conversation.append({"role": "user", "content": f'Response: {response}'})
+    completion = client.chat.completions.create(
+        model="gpt-4-1106-preview",
+        messages=conversation,
+        temperature=0.5,
+        frequency_penalty=0.5,
+    )
+    # print(completion.choices[0].message.content)
+    result = json.loads(completion.choices[0].message.content)
+    return jsonify(result)
+
 if __name__ == '__main__':
     app.run(debug=True)
