@@ -149,22 +149,14 @@ def generate_details(prompt):
     return completion.choices[0].message.content
 
 def generate_background_image(product_name):
-    """
-    Generates a minimalist and aesthetic background image for a given product name.
-    The image is generated using DALL-E, encoded in base64, and returned.
-    """
-    try:
-        response = client.images.generate(
-            model="dall-e-3",  # Make sure this model name is correct
-            prompt=f"A minimalist, elegant background with a soft, neutral color palette and subtle shadows, conveying a sense of sophistication and high quality. The image MUST NOT contain the product {product_name} itself yet it will feature a backdrop with a blur effect to ensure the focus is softened. The image MUST be creating an inviting and dynamic space without including the product {product_name} itself. The image must not include the product {product_name} by any means. The overall feel should be modern and clean, suitable for highlighting foreground objects with clarity and emphasis.",
-            n=1,  # Generate one image
-            size="1024x1024"  # Specify the desired size
-        )
-        print(response.data[0].url)
-    
-    except Exception as e:
-        print(f"Error generating image: {e}")
-        return None
+    response = client.images.generate(
+        model="dall-e-3",  # Make sure this model name is correct
+        prompt=f"A complete white background nothing else",
+        n=1,  # Generate one image
+        size="1024x1024"  # Specify the desired size
+    )
+    return response.data[0].url
+
 
 ###### Helper Functions - End ######
 
@@ -273,7 +265,7 @@ def change_bg():
     imgClient = imgbbpy.SyncClient(os.getenv('Imgbbs_API'))
     res = imgClient.upload(file='output.png')
     
-    print(res.url)
+    print("URL:" + res.url)
     
     # Prepare the request data for OpenAI API
     request_data = {
@@ -304,10 +296,12 @@ def change_bg():
     print(detected_objects)
     
     # Generate background image
-    generate_background_image(detected_objects)
+    background_image_path=generate_background_image(detected_objects)
     
-    random_number = random.randint(0, len(bg)-1)
-    background_image_path = bg[random_number]
+    # random_number = random.randint(0, len(bg)-1)
+    # background_image_path = bg[random_number]
+    
+    print(background_image_path)
     
     response = requests.get(background_image_path)
     
