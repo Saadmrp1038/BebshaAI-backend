@@ -101,14 +101,26 @@ def generate_product_details(product_name):
     completion = client.chat.completions.create(
         model="gpt-4-1106-preview",
         messages=[
-            {"role": "system", "content": "Given a product name, generate a detailed markdown document including the product's title, description, size variation, color variation, size chart, and other relevant details. Make sure there are at least 200 words in each point. Make table and listing as per requirement. You must generate the response in the form of json object. Each field is a key and the details are the values. No need to add other details like no need to add json at the beginning"},
+            {"role": "system", "content": '''
+             Given a product name, generate an appropriate title and detailed markdown document including the product's  description, use-cases, size variation, color variation, size chart, and other relevant details. Make sure there are at least 200 words in each point. Make table and listing as per requirement. You must generate the response in the form of json object. The json object will have 4 keys: productName, Title, other_fields, index. Each field is a key and the details are the values. The values are in the markdown format. No need to add other details like no need to add json at the beginning. Following is an example. If role = 'user' and content = 'product = car', then your response should be like:   
+             {
+                "productName": "car",
+                "title": "Car is a 4 wheeler vehicle",
+                "other_fields":{
+                    "Description":"Car is ... 200 words"
+                    "other_fields": "other_placeholders ...200 words"
+                }
+             }
+             '''},
             {"role": "user", "content": f'Product: {product_name}'},
         ],
         temperature=0.5,
         frequency_penalty=0.5,
     )
-
-    return completion.choices[0].message.content
+    # print(completion.choices[0].message.content)
+    temp = json.loads(completion.choices[0].message.content)
+    # print(temp)
+    return temp
 
 def generate_details(prompt):
     completion = client.chat.completions.create(
@@ -135,6 +147,24 @@ def generate_details(prompt):
     )
 
     return completion.choices[0].message.content
+
+def generate_background_image(product_name):
+    """
+    Generates a minimalist and aesthetic background image for a given product name.
+    The image is generated using DALL-E, encoded in base64, and returned.
+    """
+    try:
+        response = client.images.generate(
+            model="dall-e-3",  # Make sure this model name is correct
+            prompt=f"A minimalist, elegant background with a soft, neutral color palette and subtle shadows, conveying a sense of sophistication and high quality. The image MUST NOT contain the product {product_name} itself yet it will feature a backdrop with a blur effect to ensure the focus is softened. The image MUST be creating an inviting and dynamic space without including the product {product_name} itself. The image must not include the product {product_name} by any means. The overall feel should be modern and clean, suitable for highlighting foreground objects with clarity and emphasis.",
+            n=1,  # Generate one image
+            size="1024x1024"  # Specify the desired size
+        )
+        print(response.data[0].url)
+    
+    except Exception as e:
+        print(f"Error generating image: {e}")
+        return None
 
 ###### Helper Functions - End ######
 
@@ -196,10 +226,10 @@ def generate_product_info():
     for idx, product in enumerate(product_names, start=1):
         response = generate_product_details(product)
         results.append({
-            "index": idx,
-            "Product_name": product,
-            "gpt4_markdown_response": response
+            "body": response
         })
+
+    # results = json.loads(results)
     return jsonify(results)
 
 @app.route('/teach-topic', methods=['POST'])
@@ -239,9 +269,46 @@ def change_bg():
     foreground_image_path = 'output.png'
     foreground_image = cv2.imread(foreground_image_path, -1)  # Load with alpha channel
     
-    random_number = random.randint(0, len(bg)-1)
+    # Detect object from 'output.png'
+    imgClient = imgbbpy.SyncClient(os.getenv('Imgbbs_API'))
+    res = imgClient.upload(file='output.png')
     
+    print(res.url)
+    
+    # Prepare the request data for OpenAI API
+    request_data = {
+        "role": "user",
+        "content": [
+            {
+                "type": "text",
+                "text": "What are the objects in the following image? List just the item name separated by comma. Avoid any detail",
+            },
+            {
+                "type": "image_url",
+                "image_url": {
+                    "url": res.url,
+                },
+            },
+        ],
+    }
+    
+    # Make a request to OpenAI API
+    response = client.chat.completions.create(
+        model="gpt-4-vision-preview",
+        messages=[request_data],
+    )
+    
+    # Extract the detected objects from the response
+    detected_objects = response.choices[0].message.content
+    
+    print(detected_objects)
+    
+    # Generate background image
+    generate_background_image(detected_objects)
+    
+    random_number = random.randint(0, len(bg)-1)
     background_image_path = bg[random_number]
+    
     response = requests.get(background_image_path)
     
     if response.status_code == 200:
@@ -338,7 +405,7 @@ def scenerio_score():
         temperature=0.5,
         frequency_penalty=0.5,
     )
-    # print(completion.choices[0].message.content)
+    print(completion.choices[0].message.content)
     result = json.loads(completion.choices[0].message.content)
     return jsonify(result)
 
@@ -382,7 +449,7 @@ def find_similar_objects():
     search_results = {}
     for obj in objects_list:
         # user_input = "Search the web for related products of " + obj + " and List some URLs from the online shops. The URLs must be valid for Bangladesh. Include no other details"
-        user_input =  "Can you search the following products "+obj+"? Provide link if possible or else it's fine."
+        user_input =  "Search the following product "+obj
         qa_chain = RetrievalQAWithSourcesChain.from_chain_type(llm,retriever=web_research_retriever) 
         result = qa_chain({'question': user_input})
         
