@@ -23,16 +23,35 @@ from langchain.utilities import WikipediaAPIWrapper
 from langchain.tools import YouTubeSearchTool
 from langchain.callbacks.manager import CallbackManager
 from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
+from langchain.vectorstores import Chroma
+from langchain.embeddings import OpenAIEmbeddings
+from langchain.utilities import GoogleSearchAPIWrapper
+from langchain.chains import RetrievalQAWithSourcesChain
+from langchain.retrievers.web_research import WebResearchRetriever
 from dotenv import load_dotenv 
 import imgbbpy
+from flask_cors import CORS
 
 app = Flask(__name__)
+CORS(app)
 
 load_dotenv()
 
 client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+
+os.environ["GOOGLE_CSE_ID"] = os.getenv("GOOGLE_CSE_ID")
+os.environ["GOOGLE_API_KEY"] = os.getenv("GOOGLE_API_KEY")
 os.environ["OPENAI_API_KEY"] = os.getenv('OPENAI_API_KEY')
+
 llm = ChatOpenAI(model_name="gpt-4-1106-preview")
+
+vectorstore = Chroma(embedding_function=OpenAIEmbeddings(), persist_directory='./chroma_db_oai')
+search = GoogleSearchAPIWrapper()
+web_research_retriever = WebResearchRetriever.from_llm(
+    vectorstore=vectorstore,
+    llm=llm,
+    search=search,
+)
 
 ### Variables
 
@@ -322,6 +341,56 @@ def scenerio_score():
     # print(completion.choices[0].message.content)
     result = json.loads(completion.choices[0].message.content)
     return jsonify(result)
+
+@app.route('/find-similar-objects', methods=['POST'])
+def find_similar_objects():
+    data = request.json
+    image_url = data.get('image_url')
+    print(image_url)
+        
+    # Prepare the request data for OpenAI API
+    request_data = {
+        "role": "user",
+        "content": [
+            {
+                "type": "text",
+                "text": "What is the object in the following image? Just mention the object name and avoid any detail",
+            },
+            {
+                "type": "image_url",
+                "image_url": {
+                    "url": image_url,
+                },
+            },
+           ],
+    }
+
+    # Make a request to OpenAI API
+    response = client.chat.completions.create(
+        model="gpt-4-vision-preview",
+        messages=[request_data],
+    )
+
+    # Extract the detected objects from the response
+    detected_objects = response.choices[0].message.content
+
+    # Return the detected objects as JSON response
+    objects_list = detected_objects.split(', ')
+    
+    print(objects_list)
+    
+    search_results = {}
+    for obj in objects_list:
+        # user_input = "Search the web for related products of " + obj + " and List some URLs from the online shops. The URLs must be valid for Bangladesh. Include no other details"
+        user_input =  "Can you search the following products "+obj+"? Provide link if possible or else it's fine."
+        qa_chain = RetrievalQAWithSourcesChain.from_chain_type(llm,retriever=web_research_retriever) 
+        result = qa_chain({'question': user_input})
+        
+        print(result["answer"])
+        print(result["sources"])
+
+    return jsonify(search_results)
+    
 
 if __name__ == '__main__':
     app.run(debug=True)
