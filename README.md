@@ -1,6 +1,6 @@
-#### BebshaAI Backend
+### BebshaAI Backend
 
-#### Team: BUET_Genesis
+### Team: BUET_Genesis
 
 Welcome to the backend repository of BebshaAI, developed by Team BUET_Genesis. This backend is built in Python using Flask and incorporates various AI modules to enhance product management and user interaction. Below are the features implemented through this backend:
 
