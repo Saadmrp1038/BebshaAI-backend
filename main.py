@@ -83,7 +83,12 @@ scenerio = [
 ]
 
 bg = [
-    "https://i.postimg.cc/SxPZk5F4/sveltelogobackdrop-blur-md.png"
+    "https://xymemjvvkvbwakgtuvcb.supabase.co/storage/v1/object/public/bg/1.png",
+    "https://xymemjvvkvbwakgtuvcb.supabase.co/storage/v1/object/public/bg/2.png",
+    "https://xymemjvvkvbwakgtuvcb.supabase.co/storage/v1/object/public/bg/3.png",
+    "https://xymemjvvkvbwakgtuvcb.supabase.co/storage/v1/object/public/bg/4.png",
+    "https://xymemjvvkvbwakgtuvcb.supabase.co/storage/v1/object/public/bg/5.png",
+    "https://xymemjvvkvbwakgtuvcb.supabase.co/storage/v1/object/public/bg/6.png",
 ]
 
 # bg = [
@@ -262,44 +267,44 @@ def change_bg():
     foreground_image = cv2.imread(foreground_image_path, -1)  # Load with alpha channel
     
     # Detect object from 'output.png'
-    imgClient = imgbbpy.SyncClient(os.getenv('Imgbbs_API'))
-    res = imgClient.upload(file='output.png')
+    # imgClient = imgbbpy.SyncClient(os.getenv('Imgbbs_API'))
+    # res = imgClient.upload(file='output.png')
     
-    print("URL:" + res.url)
+    # print("URL:" + res.url)
     
     # Prepare the request data for OpenAI API
-    request_data = {
-        "role": "user",
-        "content": [
-            {
-                "type": "text",
-                "text": "What are the objects in the following image? List just the item name separated by comma. Avoid any detail",
-            },
-            {
-                "type": "image_url",
-                "image_url": {
-                    "url": res.url,
-                },
-            },
-        ],
-    }
+    # request_data = {
+    #     "role": "user",
+    #     "content": [
+    #         {
+    #             "type": "text",
+    #             "text": "What are the objects in the following image? List just the item name separated by comma. Avoid any detail",
+    #         },
+    #         {
+    #             "type": "image_url",
+    #             "image_url": {
+    #                 "url": res.url,
+    #             },
+    #         },
+    #     ],
+    # }
     
     # Make a request to OpenAI API
-    response = client.chat.completions.create(
-        model="gpt-4-vision-preview",
-        messages=[request_data],
-    )
+    # response = client.chat.completions.create(
+    #     model="gpt-4-vision-preview",
+    #     messages=[request_data],
+    # )
     
     # Extract the detected objects from the response
-    detected_objects = response.choices[0].message.content
+    # detected_objects = response.choices[0].message.content
     
-    print(detected_objects)
+    # print(detected_objects)
     
     # Generate background image
-    background_image_path=generate_background_image(detected_objects)
+    # background_image_path=generate_background_image(detected_objects)
     
-    # random_number = random.randint(0, len(bg)-1)
-    # background_image_path = bg[random_number]
+    random_number = random.randint(0, len(bg)-1)
+    background_image_path = bg[random_number]
     
     print(background_image_path)
     
@@ -443,7 +448,7 @@ def find_similar_objects():
     search_results = {}
     for obj in objects_list:
         # user_input = "Search the web for related products of " + obj + " and List some URLs from the online shops. The URLs must be valid for Bangladesh. Include no other details"
-        user_input =  "Search the following product "+obj
+        user_input =  "Search the following product and collect ecommerce links if possible:"+obj+". Only provide links to individual product"
         qa_chain = RetrievalQAWithSourcesChain.from_chain_type(llm,retriever=web_research_retriever) 
         result = qa_chain({'question': user_input})
         
