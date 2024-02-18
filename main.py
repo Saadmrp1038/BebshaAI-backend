@@ -99,32 +99,51 @@ bg = [
 ###### Helper Functions - Start ######
 
 def generate_product_details(product_name):
-    """
-    Generates product details in markdown format for a given product name,
-    including an example with diverse markdown formatting.
-    """
+    # """
+    # Generates product details in markdown format for a given product name,
+    # including an example with diverse markdown formatting.
+    # """
     completion = client.chat.completions.create(
-        model="gpt-4-1106-preview",
-        messages=[
-            {"role": "system", "content": '''
-             Given a product name, generate an appropriate title and detailed markdown document including the product's  description, use-cases, size variation, color variation, size chart, and other relevant details. Make sure there are at least 200 words in each point. Make table and listing as per requirement. You must generate the response in the form of json object. The json object will have 4 keys: productName, Title, other_fields, index. Each field is a key and the details are the values. The values are in the markdown format. No need to add other details like no need to add json at the beginning. Following is an example. If role = 'user' and content = 'product = car', then your response should be like:   
-             {
-                "productName": "car",
-                "title": "Car is a 4 wheeler vehicle",
-                "other_fields":{
-                    "Description":"Car is ... 200 words"
-                    "other_fields": "other_placeholders ...200 words"
-                }
-             }
-             '''},
-            {"role": "user", "content": f'Product: {product_name}'},
-        ],
-        temperature=0.5,
-        frequency_penalty=0.5,
+    model="gpt-4-1106-preview",
+    messages=[
+        {"role": "system", "content": '''
+        Given a product name, generate an appropriate title and detailed markdown document including the product's  description,
+        use-cases, size variation, color variation, size chart, and other relevant details.
+        Make sure there are at least 200 words in each point.
+        Make table and listing as per requirement.
+        You must generate the response in the form of json object.
+        The json object will have 4 keys: productName, Title, other_fields, index. Each field is a key and the details are the values.
+        The values are in the markdown format. No need to add other details like no need to add json at the beginning.
+        Following is an example. If role = 'user' and content = 'product = car', then your response should be like: 
+            
+        {
+            "productName": "Denim Pants",
+            "title": "Stylish and Durable Denim Pants for Everyday Wear",
+            "other_fields": {
+            "Description": "Our Denim Pants are crafted with high-quality fabric to ensure durability and comfort. Designed for the fashion-conscious individual, these pants feature a classic cut with modern styling, making them perfect for any casual or semi-formal occasion. The breathable material ensures you stay comfortable all day long, while the robust construction means they can withstand the rigors of daily wear.",
+            "Use-Cases": "These versatile denim pants are ideal for various activities – whether you're running errands, hanging out with friends, attending a casual work meeting, or going on a date. They pair well with t-shirts, casual shirts, or even blazers for a smart-casual look. The sturdy fabric makes them suitable for outdoor activities like hiking or picnicking as well.",
+            "Size Variation": "| Size | Waist (inches) | Length (inches) |\n|------|----------------|-----------------|\n| S   | 28-30          | 30              |\n| M   | 32-34          | 32              |\n| L   | 36-38          | 34              |\n| XL  | 40-42          | 36              |\n\nPlease refer to the size chart below to find your perfect fit.",
+            "Color Variation": "* Classic Blue\n* Jet Black\n* Stonewash Gray\n* Vintage Light Blue\n* Midnight Navy\nEach color is carefully selected to complement a wide range of tops and shoes, ensuring you can create multiple looks with these essential denim pants.",
+            "Size Chart": "| Size | Waist (inches) | Hip (inches) | Inseam (inches) |\n|------|----------------|--------------|------------------|\n| S    | 28-30          | 35-37        | 30               |\n| M    | 32-34          | 39-41        | 32               |\n| L    | 36-38          | 43-45        | 34               |\n| XL   | 40-42          | 47-49        | 36               |\nThe size chart provides detailed measurements to help you select the best fit for your body type."
+            },
+            "index": [
+            "Description",
+            "Use-Cases",
+            "Size Variation",
+            "Color Variation",
+            "Size Chart"
+            ]
+        }
+        
+        '''},
+        {"role": "user", "content": f'Product: "denim pants'},
+    ],
+    temperature=0.5,
+    frequency_penalty=0.5,
     )
+    # print(product_name)
     # print(completion.choices[0].message.content)
     temp = json.loads(completion.choices[0].message.content)
-    # print(temp)
     return temp
 
 def generate_details(prompt):
@@ -222,11 +241,14 @@ def generate_product_info():
     results = []
     for idx, product in enumerate(product_names, start=1):
         response = generate_product_details(product)
+        print(response)
         results.append({
             "body": response
         })
 
-    # results = json.loads(results)
+    results = {
+        "list": results
+    }
     return jsonify(results)
 
 @app.route('/teach-topic', methods=['POST'])
